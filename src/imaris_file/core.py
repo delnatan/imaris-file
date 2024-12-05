@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import datetime
 from typing import Any, Iterator, List, Optional, Tuple, Union
 
@@ -15,6 +15,9 @@ class ImageMetadata:
     pixel_sizes: Tuple[float, float, float]
     origin: Tuple[float, float, float]
     extent: Tuple[float, float, float]
+    numerical_aperture: float
+    microscope_mode: str
+    lens_power: int
 
 
 @dataclass
@@ -30,6 +33,12 @@ class TimeMetadata:
     num_timepoints: int
     timepoints: List[datetime]
     interval: Optional[float]
+
+
+def _pprint_meta(meta: dataclass):
+    for field in fields(meta):
+        _val = getattr(meta, field.name)
+        print(f"\t{field.name} : {_val}")
 
 
 class ImarisReader:
@@ -196,6 +205,9 @@ class ImarisReader:
             pixel_sizes=pixel_sizes,
             origin=origin,
             extent=extent,
+            numerical_aperture=image_attrs["NumericalAperture"],
+            microscope_mode=image_attrs["MicroscopeMode"],
+            lens_power=image_attrs["LensPower"],
         )
 
         # Read channel metadata
@@ -398,6 +410,17 @@ class ImarisReader:
         )
 
         return sample_data.nbytes * len(time_points) * len(channels)
+
+    def info(self):
+        """prints out metadata of Imaris file"""
+        print("Image info:")
+        _pprint_meta(self.image_metadata)
+        print("Channel info:")
+        for i, ch_meta in enumerate(self.channel_metadata):
+            print(f"Channel index = {i}")
+            _pprint_meta(ch_meta)
+        print("Timelapse info:")
+        _pprint_meta(self.time_metadata)
 
     def close(self) -> None:
         """Close the file handle."""
